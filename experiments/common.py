@@ -3,7 +3,7 @@ import pandas as pd
 from config import (
     REAL_TRAIN,
     REAL_TEST,
-    SYNTHETIC_PATHS,
+    SYN_TRAIN,
     VECTOR_SIZE,
     WINDOW,
     MIN_COUNT,
@@ -12,7 +12,7 @@ from config import (
     RANDOM_SEED
 )
 
-from models.bow import create_bow
+from models.bow import create_bow, preprocess_text
 from models.word2vec import Word2VecClassifier, MODELS_DIR
 from evaluation.metrics import evaluate_model
 
@@ -47,15 +47,13 @@ def load_dataset(path):
 
 def load_synthetic():
 
-    for path in SYNTHETIC_PATHS:
-        if path.exists():
-            print(f"Dataset sintético encontrado: {path}")
-            return load_dataset(path)
+    if not SYN_TRAIN.exists():
+        raise FileNotFoundError(
+            f"No se encuentra {SYN_TRAIN}. "
+            "Genéralo con: python preprocessing/prepare_dataset.py"
+        )
 
-    raise FileNotFoundError(
-        "No se encuentra synthetic_tweets.csv. "
-        "Colócalo en data/processed/ o data/raw/."
-    )
+    return load_dataset(SYN_TRAIN)
 
 
 def run_experiment(scenario, model_name):
@@ -93,6 +91,12 @@ def run_experiment(scenario, model_name):
 
     if model_name == "bow":
         model = create_bow()
+
+        # Mismo preprocesado que en models/bow.py (word2vec ya preprocesa
+        # internamente en fit/predict, por eso solo se hace aquí)
+        print("Preprocesando textos para bow...")
+        X_train = [preprocess_text(t) for t in X_train]
+        X_test = [preprocess_text(t) for t in X_test]
 
     elif model_name == "word2vec":
         model = Word2VecClassifier(

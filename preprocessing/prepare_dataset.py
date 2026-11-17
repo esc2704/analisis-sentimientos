@@ -1,47 +1,16 @@
 import io, zipfile, urllib.request
-import re, html
+import re, html, sys
 import pandas as pd
 
 from sklearn.model_selection import train_test_split
 
 from pathlib import Path
 
-ROOT_DIR = Path(__file__).resolve().parent
+# Añadimos la raiz del proyecto al path para poder importar config tanto con
+# `python preprocessing/prepare_dataset.py` como con `python -m preprocessing.prepare_dataset`
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-DATA_DIR = ROOT_DIR / "data"
-PROCESSED_DIR = DATA_DIR / "processed"
-RAW_DIR = DATA_DIR / "raw"
-
-RESULTS_DIR = ROOT_DIR / "results"
-METRICS_DIR = RESULTS_DIR / "metrics"
-FIGURES_DIR = RESULTS_DIR / "figures"
-PREDICTIONS_DIR = RESULTS_DIR / "predictions"
-
-REAL_TRAIN = PROCESSED_DIR / "real_train.csv"
-REAL_TEST = PROCESSED_DIR / "real_test.csv"
-REAL_VAL = PROCESSED_DIR / "real_val.csv"
-
-
-SYNTHETIC_PATHS = [
-    PROCESSED_DIR / "synthetic_tweets.csv",
-    RAW_DIR / "synthetic_tweets.csv",
-]
-
-RANDOM_SEED = 42
-
-# Word2Vec
-VECTOR_SIZE = 100
-WINDOW = 5
-MIN_COUNT = 1
-WORKERS = 4
-SG = 1
-
-_URL = "http://help.sentiment140.com/home"
-_DATA_URL = "https://cs.stanford.edu/people/alecmgo/trainingandtestdata.zip"
-
-_TRAIN_FILE_NAME = "training.1600000.processed.noemoticon.csv"
-
-SEED = 6
+from config import *
 
 # Contracciones y abreviaciones tipicamente usadas en ingles
 CONTRACTIONS = [
@@ -98,14 +67,33 @@ def preprocess(texto):
 
     return TOKEN_RE.findall(t)
 
-print("hola")
+def download_zip(url):
+    # Descargamos el zip en memoria
+    print(f"Descargando {url} ...")
+    with urllib.request.urlopen(url) as r:
+        return zipfile.ZipFile(io.BytesIO(r.read()))
+
+
+def clean(df):
+    # Quitamos filas vacias y tuits duplicados (mismo texto)
+    df = df.dropna(subset=["text", "label"])
+    df["text"] = df["text"].astype(str).str.strip()
+    df = df[df["text"] != ""]
+    df = df.drop_duplicates(subset="text")
+    df["label"] = df["label"].astype(int)
+
+    labels = set(df["label"].unique())
+    if not labels <= {0, 1}:
+        raise ValueError(f"Etiquetas no validas: {labels}")
+
+    return df[["text", "label"]].reset_index(drop=True)
+
+
 def load_sentiment140():
-    # Descargamos el zip con el Dataset
-    with urllib.request.urlopen(_DATA_URL) as r:
-        zf = zipfile.ZipFile(io.BytesIO(r.read()))
+    zf = download_zip(SEN_DATA_URL)
 
     cols = ["target", "id", "date", "flag", "user", "text"]
-    df = pd.read_csv(zf.open(_TRAIN_FILE_NAME),
+    df = pd.read_csv(zf.open(SEN_TRAIN_FILE_NAME),
                      encoding="latin-1", header=None, names=cols)
 
     # Nos quedamos solo con target y text. Convertimos el sentimiento
@@ -113,15 +101,48 @@ def load_sentiment140():
     df = df[["target", "text"]].copy()
     df["label"] = (df["target"] == 4).astype(int)   # 0 = negativo, 1 = positivo
 
-    return df
+    return clean(df)
+
+
+def load_synthetic():
+    zf = download_zip(SYN_DATA_URL)
+
+    df = pd.read_csv(zf.open(SYN_TRAIN_FILE_NAME), encoding="utf-8")
+
+    # Nos quedamos solo con text y label (ya viene como 0 = negativo, 1 = positivo)
+    df = df[["text", "label"]].copy()
+
+    return clean(df)
+
+
+def split(df):
+    # Primero separamos test y despues dividimos el resto en train y val,
+    # estratificando por la etiqueta para mantener la proporcion de clases
+    df_rest, df_test = train_test_split(
+        df, test_size=TEST_SIZE, stratify=df["label"], random_state=RANDOM_SEED)
+
+    val_rel = VAL_SIZE / (1 - TEST_SIZE)
+    df_train, df_val = train_test_split(
+        df_rest, test_size=val_rel, stratify=df_rest["label"], random_state=RANDOM_SEED)
+
+    return df_train, df_val, df_test
+
+
+def save_splits(name, df, train_path, val_path, test_path):
+    df_train, df_val, df_test = split(df)
+
+    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+    for part, path in [(df_train, train_path), (df_val, val_path), (df_test, test_path)]:
+        part.to_csv(path, index=False)
+
+    print(f"\n{name}: {len(df)} tuits")
+    for split_name, part, path in [("train", df_train, train_path),
+                                   ("val", df_val, val_path),
+                                   ("test", df_test, test_path)]:
+        pos = part["label"].mean()
+        print(f"  {split_name:<5} {len(part):>8}  ({pos:.1%} positivos) -> {path.relative_to(ROOT_DIR)}")
 
 
 if __name__ == "__main__":
-    df = load_sentiment140()
-
-    # 0.85 train, 0.15 test
-    df_train, df_test = train_test_split(df, test_size=0.15, stratify=df["label"], random_state=SEED)
-
-    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
-    df_train[["text", "label"]].to_csv(REAL_TRAIN, index=False)
-    df_test[["text", "label"]].to_csv(REAL_TEST, index=False)
+    save_splits("Sentiment140", load_sentiment140(), REAL_TRAIN, REAL_VAL, REAL_TEST)
+    save_splits("Sintetico", load_synthetic(), SYN_TRAIN, SYN_VAL, SYN_TEST)

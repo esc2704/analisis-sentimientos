@@ -10,7 +10,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 
 from config import RESULTS_DIR
-from src.preprocessing.prepare_dataset import preprocess
+from preprocessing.prepare_dataset import preprocess
 
 SEED = 6
 EMB_DIM = 300            # tamaño del vector de cada palabra

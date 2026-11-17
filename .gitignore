@@ -225,3 +225,6 @@ results/predictions
 results/figures 
 results/models
 results/metrics
+
+# Datasets procesados (se generan con preprocessing/prepare_dataset.py)
+data/processed/*.csv
