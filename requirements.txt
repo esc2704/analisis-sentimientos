@@ -4,3 +4,5 @@ scikit-learn
 gensim
 matplotlib
 jupyter
+tensorflow 
+tensorflow[and-cuda]
