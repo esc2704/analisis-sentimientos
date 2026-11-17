@@ -13,7 +13,7 @@ from config import (
 )
 
 from models.baseline import create_baseline
-from models.word2vec import Word2VecClassifier
+from models.word2vec import Word2VecClassifier, MODELS_DIR
 from evaluation.metrics import evaluate_model
 
 
@@ -101,7 +101,8 @@ def run_experiment(scenario, model_name):
             min_count=MIN_COUNT,
             workers=WORKERS,
             sg=SG,
-            random_state=RANDOM_SEED
+            random_state=RANDOM_SEED,
+            model_dir=MODELS_DIR / f"word2vec_{scenario}"
         )
 
     else:
