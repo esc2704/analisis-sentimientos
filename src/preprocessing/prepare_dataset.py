@@ -4,7 +4,37 @@ import pandas as pd
 
 from sklearn.model_selection import train_test_split
 
-from config import PROCESSED_DIR, REAL_TRAIN, REAL_TEST
+from pathlib import Path
+
+ROOT_DIR = Path(__file__).resolve().parent
+
+DATA_DIR = ROOT_DIR / "data"
+PROCESSED_DIR = DATA_DIR / "processed"
+RAW_DIR = DATA_DIR / "raw"
+
+RESULTS_DIR = ROOT_DIR / "results"
+METRICS_DIR = RESULTS_DIR / "metrics"
+FIGURES_DIR = RESULTS_DIR / "figures"
+PREDICTIONS_DIR = RESULTS_DIR / "predictions"
+
+REAL_TRAIN = PROCESSED_DIR / "real_train.csv"
+REAL_TEST = PROCESSED_DIR / "real_test.csv"
+REAL_VAL = PROCESSED_DIR / "real_val.csv"
+
+
+SYNTHETIC_PATHS = [
+    PROCESSED_DIR / "synthetic_tweets.csv",
+    RAW_DIR / "synthetic_tweets.csv",
+]
+
+RANDOM_SEED = 42
+
+# Word2Vec
+VECTOR_SIZE = 100
+WINDOW = 5
+MIN_COUNT = 1
+WORKERS = 4
+SG = 1
 
 _URL = "http://help.sentiment140.com/home"
 _DATA_URL = "https://cs.stanford.edu/people/alecmgo/trainingandtestdata.zip"
@@ -68,7 +98,7 @@ def preprocess(texto):
 
     return TOKEN_RE.findall(t)
 
-
+print("hola")
 def load_sentiment140():
     # Descargamos el zip con el Dataset
     with urllib.request.urlopen(_DATA_URL) as r:
