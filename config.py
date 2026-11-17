@@ -13,6 +13,7 @@ PREDICTIONS_DIR = RESULTS_DIR / "predictions"
 
 REAL_TRAIN = PROCESSED_DIR / "real_train.csv"
 REAL_TEST = PROCESSED_DIR / "real_test.csv"
+REAL_VAL = PROCESSED_DIR / "real_val.csv"
 
 # El compañero puede dejar aquí el CSV sintético.
 SYNTHETIC_PATHS = [

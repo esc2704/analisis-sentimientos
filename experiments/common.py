@@ -12,7 +12,7 @@ from config import (
     RANDOM_SEED
 )
 
-from models.baseline import create_baseline
+from models.bow import create_bow
 from models.word2vec import Word2VecClassifier, MODELS_DIR
 from evaluation.metrics import evaluate_model
 
@@ -92,7 +92,7 @@ def run_experiment(scenario, model_name):
     y_test = real_test["label"].tolist()
 
     if model_name == "bow":
-        model = create_baseline()
+        model = create_bow()
 
     elif model_name == "word2vec":
         model = Word2VecClassifier(

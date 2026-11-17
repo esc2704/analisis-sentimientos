@@ -221,3 +221,7 @@ __marimo__/
 
 # de emma
 venv_analisis_sentimientos
+results/predictions
+results/figures 
+results/models
+results/metrics

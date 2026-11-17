@@ -10,6 +10,7 @@ source venv_analisis_sentimiento/bin/activate
 pip install -r requirements.txt
 
 ## ejecuta experiments y compare_models
+rm -f results/metrics/*.csv
 python -m experiments.run_all
 
 # Flujo de ejecución del proyecto
